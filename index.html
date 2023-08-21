@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<head>
+    <style>
+        .tooltip {   
+            position: absolute;         
+            text-align: center;         
+            padding: 8px;               
+            font: 12px sans-serif;      
+            background: lightsteelblue; 
+            border: 0px;        
+            border-radius: 8px;         
+            pointer-events: none;       
+        }
+    </style>
+</head>
+
+<div id="container"></div>
+<script type="module">
+
+import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
+
+const columns = ['2022 rank','City','State','2022 estimate','2020 census'];
+const data = [
+    ['1','New York','New York','8335897','8804190'],
+    ['2','Los Angeles','California','3822238','3898747'],
+    ['3','Chicago','Illinois','2665039','2746388'],
+    ['4','Houston','Texas','2302878','2304580'],
+    ['5','Phoenix','Arizona','1644409','1608139'],
+    ['6','Philadelphia','Pennsylvania','1567258','1603797'],
+    ['7','San Antonio','Texas','1472909','1434625'],
+    ['8','San Diego','California','1381162','1386932'],
+    ['9','Dallas','Texas','1299544','1304379'],
+    ['10','Austin','Texas','974447','961855'],
+]
+
+const DATA_KEYS = {
+    RANK: 0,
+    CITY: 1,
+    STATE: 2,
+    ESTIMATE: 3,
+    CENSUS: 4
+}
+
+// Declare the chart dimensions and margins.
+const width = 1000;
+const height = 400;
+const marginTop = 20;
+const marginRight = 20;
+const marginBottom = 30;
+const marginLeft = 100;
+
+// x axis should be city
+// Declare the x (horizontal position) scale.
+const x = d3.scaleBand()
+    .domain(data.map(d => d[DATA_KEYS.CITY]))
+    .range([marginLeft, width - marginRight])
+    .padding(0.1);
+
+
+const yMax = 10000000;
+// Declare the y (vertical position) scale.
+const y = d3.scaleLinear()
+    .domain([0, yMax])
+    .range([height - marginBottom, marginTop]);
+
+// Create the SVG container.
+const svg = d3.create("svg")
+    .attr("width", width)
+    .attr("height", height);
+
+// Insert X-axis
+svg.append("g")
+    .attr("transform", `translate(0,${height - marginBottom})`)
+    .call(d3.axisBottom(x));
+
+// Insert Y-axis
+svg.append("g")
+    .attr("transform", `translate(${marginLeft},0)`)
+    .call(d3.axisLeft(y));
+
+// create a bar for each data element, and position it on the x axis
+svg.selectAll("rect")
+    .data(data)
+    .join("rect")
+    .attr("x", d => x(d[DATA_KEYS.CITY]))
+    .attr("y", d => y(d[DATA_KEYS.ESTIMATE]))
+    .attr("width", x.bandwidth() / 2)
+    .attr("height", d => y(0) - y(d[DATA_KEYS.ESTIMATE]]))
+    .attr("fill", "steelblue");
+
+svg.selectAll("secondSeries")
+    .data(data)
+    .join("rect")
+    .classed("secondSeries", true)
+    .attr("x", d => x(d[DATA_KEYS.CITY]) + x.bandwidth() / 2)
+    .attr("y", d => y(d[DATA_KEYS.CENSUS]))
+    .attr("width", x.bandwidth() / 2)
+    .attr("height", d => y(0) - y(d[DATA_KEYS.CENSUS]))
+    .attr("fill", "red");
+
+// Define the div for the tooltip
+var tooltip = d3.select("body").append("div") 
+    .attr("class", "tooltip")       
+    .style("opacity", 0);
+
+// TODO: consolidate these into functions
+// shows the tooltip when hovering over a bar
+svg.selectAll("rect")
+    .on("mouseover", function(d) {      
+        tooltip.transition()        
+            .duration(200)      
+            .style("opacity", .9);      
+        tooltip.html(d.target.__data__[DATA_KEYS.CITY] + "<br/>"  + Number(d.target.__data__[DATA_KEYS.ESTIMATE]).toLocaleString())  
+            .style("left", (event.pageX) + "px")     
+            .style("top", (event.pageY - 28) + "px");    
+        })                  
+    .on("mouseout", function(d) {       
+        tooltip.transition()        
+            .duration(500)      
+            .style("opacity", 0);   
+    });
+
+svg.selectAll(".secondSeries")
+    .on("mouseover", function(d) {      
+        tooltip.transition()        
+            .duration(200)      
+            .style("opacity", .9);      
+        tooltip.html(d.target.__data__[DATA_KEYS.CITY] + "<br/>"  + Number(d.target.__data__[DATA_KEYS.CENSUS]).toLocaleString())  
+            .style("left", (event.pageX) + "px")     
+            .style("top", (event.pageY - 28) + "px");    
+        })                  
+    .on("mouseout", function(d) {       
+        tooltip.transition()        
+            .duration(500)      
+            .style("opacity", 0);   
+    });
+
+
+// Append the SVG element.
+container.append(svg.node());
+
+</script>
