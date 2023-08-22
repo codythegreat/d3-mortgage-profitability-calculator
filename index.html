@@ -14,7 +14,32 @@
     </style>
 </head>
 
-<div id="container"></div>
+<body>
+    <form>
+        <label for="homePrice">Home Price</label>
+        <input type="number" id="homePrice" name="homePrice" value="350000"><br><br>
+
+        <label for="rentPrice">Rent Price</label>
+        <input type="number" id="rentPrice" name="rentPrice" value="1800"><br><br>
+
+        <label for="investmentRate">Investment Rate of Return (%)</label>
+        <input type="number" id="investmentRate" name="investmentRate" value="8" min="0" max="100"><br><br>
+
+        <label for="homeAppreciation">Home Appreciation Rate (%)</label>
+        <input type="number" id="homeAppreciation" name="homeAppreciation" value="4.5" min="0" max="100"><br><br>
+
+        <label for="homeMaintainence">Home Maintainence (%)</label>
+        <input type="number" id="homeMaintainence" name="homeMaintainence" value="1.5" min="0" max="100"><br><br>
+
+        <label for="inflation">Inflation Rate (%)</label>
+        <input type="number" id="inflation" name="inflation" value="2" min="0" max="100"><br><br>
+
+        <input type="button" value="Click me" onclick="alert('Hello World!')">
+    </form>
+
+    <div id="container"></div>
+</body>
+
 <script type="module">
 
 import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
