@@ -85,7 +85,7 @@ svg.selectAll("rect")
     .attr("x", d => x(d[DATA_KEYS.CITY]))
     .attr("y", d => y(d[DATA_KEYS.ESTIMATE]))
     .attr("width", x.bandwidth() / 2)
-    .attr("height", d => y(0) - y(d[DATA_KEYS.ESTIMATE]]))
+    .attr("height", d => y(0) - y(d[DATA_KEYS.ESTIMATE]))
     .attr("fill", "steelblue");
 
 svg.selectAll("secondSeries")
