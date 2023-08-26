@@ -19,6 +19,12 @@
         <label for="homePrice">Home Price</label>
         <input type="number" id="homePrice" name="homePrice" value="350000"><br><br>
 
+        <label for="downPayment">Down Payment (%)</label>
+        <input type="number" id="downPayment" name="downPayment" value="20" min="0" max="100"><br><br>
+
+        <label for="mortgagePayment">Mortgage Payment</label>
+        <input type="number" id="mortgagePayment" name="mortgagePayment" value="2400"><br><br>
+
         <label for="rentPrice">Rent Price</label>
         <input type="number" id="rentPrice" name="rentPrice" value="1800"><br><br>
 
@@ -34,7 +40,10 @@
         <label for="inflation">Inflation Rate (%)</label>
         <input type="number" id="inflation" name="inflation" value="2" min="0" max="100"><br><br>
 
-        <input type="button" value="Click me" onclick="alert('Hello World!')">
+        <label for="years">Years</label>
+        <input type="number" id="years" name="years" value="30" min="0" max="40"><br><br>
+
+        <input type="button" value="Click me" onclick="buildD3HomeAppreciationLineChart()">
     </form>
 
     <div id="container"></div>
@@ -44,124 +53,193 @@
 
 import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
 
-const columns = ['2022 rank','City','State','2022 estimate','2020 census'];
-const data = [
-    ['1','New York','New York','8335897','8804190'],
-    ['2','Los Angeles','California','3822238','3898747'],
-    ['3','Chicago','Illinois','2665039','2746388'],
-    ['4','Houston','Texas','2302878','2304580'],
-    ['5','Phoenix','Arizona','1644409','1608139'],
-    ['6','Philadelphia','Pennsylvania','1567258','1603797'],
-    ['7','San Antonio','Texas','1472909','1434625'],
-    ['8','San Diego','California','1381162','1386932'],
-    ['9','Dallas','Texas','1299544','1304379'],
-    ['10','Austin','Texas','974447','961855'],
-]
+window.getData = function() {
+    const MONTHS_IN_YEAR = 12;
 
-const DATA_KEYS = {
-    RANK: 0,
-    CITY: 1,
-    STATE: 2,
-    ESTIMATE: 3,
-    CENSUS: 4
+    let homePrice = document.getElementById("homePrice").value;
+    let downPayment = document.getElementById("downPayment").value;
+    let mortgagePayment = document.getElementById("mortgagePayment").value;
+    let rentPrice = document.getElementById("rentPrice").value;
+    let investmentRate = document.getElementById("investmentRate").value;
+    let homeAppreciation = document.getElementById("homeAppreciation").value;
+    let homeMaintainence = document.getElementById("homeMaintainence").value;
+    let inflationRate = document.getElementById("inflation").value;
+    let years = document.getElementById("years").value;
+
+    let data = [
+        {
+            "year": 1,
+            "inflation": 1,
+            "homeValue": homePrice,
+            "investmentValue": homePrice * (downPayment / 100),
+        }
+    ];
+
+    for (let i = 1; i <= years; i++) {
+        let previousRow = data[i-1];
+        let currentInflation = previousRow.inflation * (1 + (inflationRate / 100));
+
+        let homeValue = previousRow.homeValue * (1 + (homeAppreciation / 100) - (inflationRate / 100));
+
+        let investmentValue = 
+            // difference between rent and mortgage
+            (mortgagePayment * MONTHS_IN_YEAR) - (rentPrice * MONTHS_IN_YEAR * currentInflation)
+            // add previous investment value + RoR, subtract inflation
+            + (previousRow.investmentValue * (1 + (investmentRate / 100) - (inflationRate / 100)));
+            // add home maintainence
+            + (homeValue * (homeMaintainence / 100));
+        
+        data.push({
+            "year": i + 1,
+            "inflation": currentInflation,
+            "homeValue": homeValue,
+            "investmentValue": investmentValue,
+        });
+    }
+
+    return data;
 }
 
-// Declare the chart dimensions and margins.
-const width = 1000;
-const height = 400;
-const marginTop = 20;
-const marginRight = 20;
-const marginBottom = 30;
-const marginLeft = 100;
+window.buildD3HomeAppreciationLineChart = function() {
+    let data = getData();
 
-// x axis should be city
-// Declare the x (horizontal position) scale.
-const x = d3.scaleBand()
-    .domain(data.map(d => d[DATA_KEYS.CITY]))
-    .range([marginLeft, width - marginRight])
-    .padding(0.1);
+    const DATA_KEYS = {
+        YEAR: "year" ,
+        INFLATION: "inflation",
+        HOME_VALUE: "homeValue",
+        INVESTMENT_VALUE: "investmentValue"
+    };
 
+    // Declare the chart dimensions and margins.
+    const width = 1000;
+    const height = 400;
+    const marginTop = 20;
+    const marginRight = 20;
+    const marginBottom = 30;
+    const marginLeft = 100;
 
-const yMax = 10000000;
-// Declare the y (vertical position) scale.
-const y = d3.scaleLinear()
-    .domain([0, yMax])
-    .range([height - marginBottom, marginTop]);
+    // x axis is years
+    // Declare the x (horizontal position) scale.
+    const x = d3.scaleLinear()
+        .domain([0, data.length])
+        .range([marginLeft, width - marginRight]);
+    
+    // y axis is $ (max of either home value or investment value)
+    let yMax = data.reduce((max, row) => {
+        return Math.max(max, row[DATA_KEYS.HOME_VALUE], row[DATA_KEYS.INVESTMENT_VALUE]);
+    }, 0);
 
-// Create the SVG container.
-const svg = d3.create("svg")
-    .attr("width", width)
-    .attr("height", height);
+    // Declare the y (vertical position) scale.
+    const y = d3.scaleLinear()
+        .domain([0, yMax])
+        .range([height - marginBottom, marginTop]);
+    
+    // Create the SVG container.
+    const svg = d3.create("svg")
+        .attr("width", width)
+        .attr("height", height);
+    
+    // Insert X-axis
+    svg.append("g")
+        .attr("transform", `translate(0,${height - marginBottom})`)
+        .call(d3.axisBottom(x));
+    
+    // Insert Y-axis
+    svg.append("g")
+        .attr("transform", `translate(${marginLeft},0)`)
+        .call(
+            d3.axisLeft(y)
+                .tickFormat(d3.format("$,.0f"))
+        );
+    
+    // create a line for each data element, and position it on the x axis
+    svg.append("path")
+        .datum(data)
+        .attr("fill", "none")
+        .attr("stroke", "steelblue")
+        .attr("stroke-width", 1.5)
+        .attr("d", d3.line()
+            .x(d => x(d[DATA_KEYS.YEAR]))
+            .y(d => y(d[DATA_KEYS.HOME_VALUE]))
+        );
 
-// Insert X-axis
-svg.append("g")
-    .attr("transform", `translate(0,${height - marginBottom})`)
-    .call(d3.axisBottom(x));
+    svg.append("path")
+        .datum(data)
+        .attr("fill", "none")
+        .attr("stroke", "red")
+        .attr("stroke-width", 1.5)
+        .attr("d", d3.line()
+            .x(d => x(d[DATA_KEYS.YEAR]))
+            .y(d => y(d[DATA_KEYS.INVESTMENT_VALUE]))
+        );
+    
+    // create a legend
+    svg.append("circle")
+        .attr("cx",marginLeft)
+        .attr("cy",marginTop)
+        .attr("r", 6)
+        .style("fill", "steelblue");
 
-// Insert Y-axis
-svg.append("g")
-    .attr("transform", `translate(${marginLeft},0)`)
-    .call(d3.axisLeft(y));
+    svg.append("circle")
+        .attr("cx",marginLeft)
+        .attr("cy",marginTop + 20)
+        .attr("r", 6)
+        .style("fill", "red");
 
-// create a bar for each data element, and position it on the x axis
-svg.selectAll("rect")
-    .data(data)
-    .join("rect")
-    .attr("x", d => x(d[DATA_KEYS.CITY]))
-    .attr("y", d => y(d[DATA_KEYS.ESTIMATE]))
-    .attr("width", x.bandwidth() / 2)
-    .attr("height", d => y(0) - y(d[DATA_KEYS.ESTIMATE]))
-    .attr("fill", "steelblue");
+    svg.append("text")
+        .attr("x", marginLeft + 20)
+        .attr("y", marginTop)
+        .text("Home Value")
+        .style("font-size", "15px")
+        .attr("alignment-baseline","middle");
 
-svg.selectAll("secondSeries")
-    .data(data)
-    .join("rect")
-    .classed("secondSeries", true)
-    .attr("x", d => x(d[DATA_KEYS.CITY]) + x.bandwidth() / 2)
-    .attr("y", d => y(d[DATA_KEYS.CENSUS]))
-    .attr("width", x.bandwidth() / 2)
-    .attr("height", d => y(0) - y(d[DATA_KEYS.CENSUS]))
-    .attr("fill", "red");
+    svg.append("text")
+        .attr("x", marginLeft + 20)
+        .attr("y", marginTop + 20)
+        .text("Investment Value")
+        .style("font-size", "15px")
+        .attr("alignment-baseline","middle");
+    
+    // Append the SVG element.
+    container.append(svg.node());
 
-// Define the div for the tooltip
-var tooltip = d3.select("body").append("div") 
-    .attr("class", "tooltip")       
-    .style("opacity", 0);
+}
 
-// TODO: consolidate these into functions
-// shows the tooltip when hovering over a bar
-svg.selectAll("rect")
-    .on("mouseover", function(d) {      
-        tooltip.transition()        
-            .duration(200)      
-            .style("opacity", .9);      
-        tooltip.html(d.target.__data__[DATA_KEYS.CITY] + "<br/>"  + Number(d.target.__data__[DATA_KEYS.ESTIMATE]).toLocaleString())  
-            .style("left", (event.pageX) + "px")     
-            .style("top", (event.pageY - 28) + "px");    
-        })                  
-    .on("mouseout", function(d) {       
-        tooltip.transition()        
-            .duration(500)      
-            .style("opacity", 0);   
-    });
+// // Define the div for the tooltip
+// var tooltip = d3.select("body").append("div") 
+//     .attr("class", "tooltip")       
+//     .style("opacity", 0);
 
-svg.selectAll(".secondSeries")
-    .on("mouseover", function(d) {      
-        tooltip.transition()        
-            .duration(200)      
-            .style("opacity", .9);      
-        tooltip.html(d.target.__data__[DATA_KEYS.CITY] + "<br/>"  + Number(d.target.__data__[DATA_KEYS.CENSUS]).toLocaleString())  
-            .style("left", (event.pageX) + "px")     
-            .style("top", (event.pageY - 28) + "px");    
-        })                  
-    .on("mouseout", function(d) {       
-        tooltip.transition()        
-            .duration(500)      
-            .style("opacity", 0);   
-    });
+// // TODO: consolidate these into functions
+// // shows the tooltip when hovering over a bar
+// svg.selectAll("rect")
+//     .on("mouseover", function(d) {      
+//         tooltip.transition()        
+//             .duration(200)      
+//             .style("opacity", .9);      
+//         tooltip.html(d.target.__data__[DATA_KEYS.CITY] + "<br/>"  + Number(d.target.__data__[DATA_KEYS.ESTIMATE]).toLocaleString())  
+//             .style("left", (event.pageX) + "px")     
+//             .style("top", (event.pageY - 28) + "px");    
+//         })                  
+//     .on("mouseout", function(d) {       
+//         tooltip.transition()        
+//             .duration(500)      
+//             .style("opacity", 0);   
+//     });
 
-
-// Append the SVG element.
-container.append(svg.node());
+// svg.selectAll(".secondSeries")
+//     .on("mouseover", function(d) {      
+//         tooltip.transition()        
+//             .duration(200)      
+//             .style("opacity", .9);      
+//         tooltip.html(d.target.__data__[DATA_KEYS.CITY] + "<br/>"  + Number(d.target.__data__[DATA_KEYS.CENSUS]).toLocaleString())  
+//             .style("left", (event.pageX) + "px")     
+//             .style("top", (event.pageY - 28) + "px");    
+//         })                  
+//     .on("mouseout", function(d) {       
+//         tooltip.transition()        
+//             .duration(500)      
+//             .style("opacity", 0);   
+//     });
 
 </script>
