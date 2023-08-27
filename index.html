@@ -100,7 +100,14 @@ window.getData = function() {
     return data;
 }
 
+// create a function to remove the chart if it already exists
+window.removeD3HomeAppreciationLineChart = function() {
+    d3.select("#container").selectAll("*").remove();
+}
+
 window.buildD3HomeAppreciationLineChart = function() {
+    removeD3HomeAppreciationLineChart();
+
     let data = getData();
 
     const DATA_KEYS = {
@@ -175,71 +182,116 @@ window.buildD3HomeAppreciationLineChart = function() {
     
     // create a legend
     svg.append("circle")
-        .attr("cx",marginLeft)
+        .attr("cx",marginLeft + 20)
         .attr("cy",marginTop)
         .attr("r", 6)
         .style("fill", "steelblue");
 
     svg.append("circle")
-        .attr("cx",marginLeft)
+        .attr("cx",marginLeft + 20)
         .attr("cy",marginTop + 20)
         .attr("r", 6)
         .style("fill", "red");
 
     svg.append("text")
-        .attr("x", marginLeft + 20)
-        .attr("y", marginTop)
+        .attr("x", marginLeft + 40)
+        .attr("y", marginTop + 5)
         .text("Home Value")
         .style("font-size", "15px")
         .attr("alignment-baseline","middle");
 
     svg.append("text")
-        .attr("x", marginLeft + 20)
-        .attr("y", marginTop + 20)
+        .attr("x", marginLeft + 40)
+        .attr("y", marginTop + 25)
         .text("Investment Value")
         .style("font-size", "15px")
         .attr("alignment-baseline","middle");
+
+    // Define the div for the tooltip
+    var tooltip = d3.select("body").append("div") 
+        .attr("class", "tooltip")       
+        .style("opacity", 0);
     
+    var circles = svg.selectAll(".home-value-circle")
+        .data(data)
+        .enter()
+        .append("circle")
+            .attr("class", "home-value-circle")
+            .attr("cx", function(d) { return x(d[DATA_KEYS.YEAR]); })
+            .attr("cy", function(d) { return y(d[DATA_KEYS.HOME_VALUE]); })
+            .attr("r", 5)
+            .style("fill", "steelblue")
+            .style("opacity", 0.5);
+
+    circles.on("mouseover", function(event,d) {      
+        tooltip.transition()        
+            .duration(200)      
+            .style("opacity", .9);      
+        
+        const year = Number(d[DATA_KEYS.YEAR]).toLocaleString();
+        const value = Math.round(Number(d[DATA_KEYS.HOME_VALUE])/1000).toLocaleString() + "k";
+
+        tooltip.html(`Year: ${year}<br/>Value: ${value}`);
+    
+        const rect = event.target.getBoundingClientRect();
+
+        // Get center of the circle
+        const circleCenterX = window.scrollX + rect.left + rect.width / 2;
+        const circleCenterY = window.scrollY + rect.top + rect.height / 2;
+
+        // Assume a standard tooltip width for calculating the center
+        const tooltipWidth = tooltip.node().getBoundingClientRect().width;
+        const tooltipHeight = tooltip.node().getBoundingClientRect().height;
+     
+        tooltip.style("left", (circleCenterX - tooltipWidth / 2) + "px")     
+            .style("top", (circleCenterY - tooltipHeight - 15) + "px"); 
+    }).on("mouseout", function(d) {       
+        tooltip.transition()        
+            .duration(500)      
+            .style("opacity", 0);
+    });
+
+    var circles2 = svg.selectAll(".investment-value-circle")
+        .data(data)
+        .enter()
+        .append("circle")
+            .attr("class", "investment-value-circle")
+            .attr("cx", function(d) { return x(d[DATA_KEYS.YEAR]); })
+            .attr("cy", function(d) { return y(d[DATA_KEYS.INVESTMENT_VALUE]); })
+            .attr("r", 5)
+            .style("fill", "red")
+            .style("opacity", 0.5);
+
+    circles2.on("mouseover", function(event,d) {      
+        tooltip.transition()        
+            .duration(200)      
+            .style("opacity", .9);      
+        
+        const year = Number(d[DATA_KEYS.YEAR]).toLocaleString();
+        const value = Math.round(Number(d[DATA_KEYS.INVESTMENT_VALUE])/1000).toLocaleString() + "k";
+
+        tooltip.html(`Year: ${year}<br/>Value: ${value}`);
+    
+        const rect = event.target.getBoundingClientRect();
+
+        // Get center of the circle
+        const circleCenterX = window.scrollX + rect.left + rect.width / 2;
+        const circleCenterY = window.scrollY + rect.top + rect.height / 2;
+
+        // Assume a standard tooltip width for calculating the center
+        const tooltipWidth = tooltip.node().getBoundingClientRect().width;
+        const tooltipHeight = tooltip.node().getBoundingClientRect().height;
+     
+        tooltip.style("left", (circleCenterX - tooltipWidth / 2) + "px")     
+            .style("top", (circleCenterY - tooltipHeight - 15) + "px"); 
+    }).on("mouseout", function(d) {       
+        tooltip.transition()        
+            .duration(500)      
+            .style("opacity", 0);
+    });
+
     // Append the SVG element.
     container.append(svg.node());
-
 }
-
-// // Define the div for the tooltip
-// var tooltip = d3.select("body").append("div") 
-//     .attr("class", "tooltip")       
-//     .style("opacity", 0);
-
-// // TODO: consolidate these into functions
-// // shows the tooltip when hovering over a bar
-// svg.selectAll("rect")
-//     .on("mouseover", function(d) {      
-//         tooltip.transition()        
-//             .duration(200)      
-//             .style("opacity", .9);      
-//         tooltip.html(d.target.__data__[DATA_KEYS.CITY] + "<br/>"  + Number(d.target.__data__[DATA_KEYS.ESTIMATE]).toLocaleString())  
-//             .style("left", (event.pageX) + "px")     
-//             .style("top", (event.pageY - 28) + "px");    
-//         })                  
-//     .on("mouseout", function(d) {       
-//         tooltip.transition()        
-//             .duration(500)      
-//             .style("opacity", 0);   
-//     });
-
-// svg.selectAll(".secondSeries")
-//     .on("mouseover", function(d) {      
-//         tooltip.transition()        
-//             .duration(200)      
-//             .style("opacity", .9);      
-//         tooltip.html(d.target.__data__[DATA_KEYS.CITY] + "<br/>"  + Number(d.target.__data__[DATA_KEYS.CENSUS]).toLocaleString())  
-//             .style("left", (event.pageX) + "px")     
-//             .style("top", (event.pageY - 28) + "px");    
-//         })                  
-//     .on("mouseout", function(d) {       
-//         tooltip.transition()        
-//             .duration(500)      
-//             .style("opacity", 0);   
-//     });
 
 </script>
